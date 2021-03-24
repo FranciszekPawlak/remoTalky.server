@@ -7,21 +7,65 @@ const jwt = require("jsonwebtoken");
 dotenv.config();
 const secret = process.env.SECRET;
 
-authRoutes.post("/register", async (req, res) => {
+authRoutes.post("/register", withAuth, async (req, res) => {
   try {
     const { username, email, password, role } = req.body;
     const user = new UserSchema({ username, email, password, role });
     user.save((err) => {
       if (err) {
-        console.log(err);
-        res.status(500).send("Error registering new user please try again.");
+        res.status(500).json({
+          error:
+            "Error registering new user please try again. Probably email is already in use",
+        });
       } else {
-        res.status(200).send("Welcome to the club!");
+        res.status(200).send("Success");
       }
     });
   } catch (err) {
     res.status(400).send(parseError(err));
   }
+});
+
+authRoutes.post("/resetPassword", withAuth, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  const userEmail = req.user.email;
+
+  UserSchema.findOne({ email: userEmail }, function (err, user) {
+    if (err) {
+      console.error(err);
+      res.status(500).json({
+        error: "Internal error please try again",
+      });
+    } else if (!user) {
+      res.status(401).json({
+        error: "Incorrect token. Logout and try again",
+      });
+    } else {
+      user.isCorrectPassword(oldPassword, function (err, same) {
+        if (err) {
+          res.status(500).json({
+            error: "Internal error please try again",
+          });
+        } else if (!same) {
+          res.status(401).json({
+            error: "Incorrect password",
+          });
+        } else {
+          // Issue token
+          user.password = newPassword;
+          user.save(function (err) {
+            if (err) {
+              res.status(500).json({
+                error: "Internal error please try again",
+              });
+            } else {
+              res.status(200).send("Success");
+            }
+          });
+        }
+      });
+    }
+  });
 });
 
 authRoutes.post("/login", (req, res) => {
@@ -48,7 +92,11 @@ authRoutes.post("/login", (req, res) => {
           });
         } else {
           // Issue token
-          const payload = { username: user.username, role: user.role };
+          const payload = {
+            username: user.username,
+            role: user.role,
+            email: user.email,
+          };
           const token = jwt.sign(payload, secret, {
             expiresIn: "14d",
           });

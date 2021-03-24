@@ -5,6 +5,7 @@ module.exports.initialUser = async () => {
   if (data.length !== 0) {
     return;
   }
+  console.log(process.env.ADMIN_EMAIL);
   const user = new UserSchema({
     username: "admin",
     email: process.env.ADMIN_EMAIL,

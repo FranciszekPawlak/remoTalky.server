@@ -1,5 +1,11 @@
 const express = require("express");
 const app = express();
+const http = require("http").createServer(app);
+const io = require("socket.io")(http, {
+  cors: {
+    origin: "http://localhost:3000",
+  },
+});
 const cors = require("cors");
 const mongoose = require("mongoose");
 const authRoutes = require("./routes/user");
@@ -31,4 +37,17 @@ app.use("/", authRoutes);
 
 initialUser();
 
+io.on("connection", (socket) => {
+  console.log("New client connected");
+
+  socket.on("message", (message) => {
+    io.emit("message", message);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Client disconnected");
+  });
+});
+
 app.listen(4000, () => console.log(`Server is running on port 4000.`));
+http.listen(4001, () => console.log(`Socket.io is running on port 4001.`));
