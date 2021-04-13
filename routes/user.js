@@ -28,9 +28,9 @@ authRoutes.post("/register", withAuth, async (req, res) => {
 
 authRoutes.post("/resetPassword", withAuth, async (req, res) => {
   const { oldPassword, newPassword } = req.body;
-  const userEmail = req.user.email;
+  const userId = req.user.id;
 
-  UserSchema.findOne({ email: userEmail }, function (err, user) {
+  UserSchema.findOne({ _id: userId }, function (err, user) {
     if (err) {
       console.error(err);
       res.status(500).json({
@@ -95,7 +95,7 @@ authRoutes.post("/login", (req, res) => {
           const payload = {
             username: user.username,
             role: user.role,
-            email: user.email,
+            id: user._id,
           };
           const token = jwt.sign(payload, secret, {
             expiresIn: "14d",
@@ -103,7 +103,9 @@ authRoutes.post("/login", (req, res) => {
           res.cookie("token", token, {
             httpOnly: true,
           });
-          res.status(200).json({ username: user.username, role: user.role });
+          res
+            .status(200)
+            .json({ username: user.username, role: user.role, id: user._id });
         }
       });
     }
@@ -112,6 +114,30 @@ authRoutes.post("/login", (req, res) => {
 
 authRoutes.get("/checkRole", withAuth, function (req, res) {
   res.status(200).json(req.user);
+});
+
+authRoutes.get("/users", withAuth, function (req, res) {
+  const requestUserId = req.user.id;
+  UserSchema.find({ _id: { $ne: requestUserId } }, (err, users) => {
+    if (err) {
+      console.error(err);
+      res.status(500).json({
+        error: "Internal error please try again",
+      });
+    } else if (!users) {
+      res.status(401).json({
+        error: "No users in db",
+      });
+    } else {
+      const usersForSelect = users.map((user) => ({
+        id: user._id,
+        username: user.username,
+        email: user.email,
+      }));
+
+      res.status(200).json(usersForSelect);
+    }
+  });
 });
 
 authRoutes.get("/logout", (req, res) => {

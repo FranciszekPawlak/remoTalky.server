@@ -21,7 +21,7 @@ const withAuth = function (req, res, next) {
         req.user = {
           username: decoded.username,
           role: decoded.role,
-          email: decoded.email,
+          id: decoded.id,
         };
         next();
       }
