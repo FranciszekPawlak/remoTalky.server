@@ -1,24 +1,24 @@
 const MessageSchema = require("../models/Message");
-const ConversationSchema = require("../models/Conversation");
+const GroupSchema = require("../models/Group");
 const {
   addUser,
   getUser,
   deleteUser,
   getUsers,
   clearUsers,
-  getUsersInConversation,
-} = require("../helpers/conversationUser");
+  getUsersInGroup,
+} = require("../helpers/groupUser");
 
 exports = module.exports = function (io) {
   io.sockets.on("connection", function (socket) {
-    socket.on("joinConversation", (userId, conversationId) => {
-      console.log("join");
-      const { user, error } = addUser(socket.id, userId, conversationId);
+    socket.on("joinGroup", (userId, groupId) => {
+      console.log("join chat");
+      const { user, error } = addUser(socket.id, userId, groupId);
       // if (error) return io.emit("message", { status: "error", data: error });
-      socket.join(user.conversation);
+      socket.join(user.group);
 
       const query = MessageSchema.find({
-        conversation: conversationId,
+        group: groupId,
       })
         .populate("user", "username")
         .sort("createdDate");
@@ -37,11 +37,11 @@ exports = module.exports = function (io) {
     });
 
     socket.on("markMessagesAsSeen", () => {
-      const { userId, conversation } = getUser(socket.id);
-      if (conversation && userId) {
+      const { userId, group } = getUser(socket.id);
+      if (group && userId) {
         MessageSchema.updateMany(
           {
-            conversation: conversation,
+            group: group,
             seen: { $ne: userId },
           },
           {
@@ -60,17 +60,17 @@ exports = module.exports = function (io) {
       if (!socket.id) {
         return;
       }
-      const { conversation, userId } = getUser(socket.id);
+      const { group, userId } = getUser(socket.id);
 
-      socket.to(conversation).emit("typing", { user: userId, status: action });
+      socket.to(group).emit("typing", { user: userId, status: action });
     });
 
-    socket.on("leaveConversation", () => {
+    socket.on("leaveGroup", () => {
       console.log("disconnected");
       const user = getUser(socket.id);
       if (user) {
         deleteUser(user.id);
-        socket.leave(user.conversation);
+        socket.leave(user.group);
         if (io.sockets.sockets[socket.id]) {
           io.sockets.sockets[socket.id].disconnect();
         }
@@ -81,7 +81,7 @@ exports = module.exports = function (io) {
       const user = getUser(socket.id);
       if (user) {
         deleteUser(user.id);
-        socket.leave(user.conversation);
+        socket.leave(user.group);
         if (io.sockets.sockets[socket.id]) {
           io.sockets.sockets[socket.id].disconnect();
         }
@@ -89,16 +89,13 @@ exports = module.exports = function (io) {
     });
 
     socket.on("message", (message) => {
-      const { conversation, userId } = getUser(socket.id);
-      const usersInConversation = getUsersInConversation(conversation);
+      const { group, userId } = getUser(socket.id);
+      const usersInGroup = getUsersInGroup(group);
 
-      ConversationSchema.findOne({ _id: conversation }, function (
-        err,
-        conversation
-      ) {
-        if (!err && conversation) {
-          conversation.lastUpdate = Date.now();
-          conversation.save((err) => {
+      GroupSchema.findOne({ _id: group }, function (err, group) {
+        if (!err && group) {
+          group.lastUpdate = Date.now();
+          group.save((err) => {
             if (err) {
               console.error(err);
             }
@@ -108,9 +105,9 @@ exports = module.exports = function (io) {
 
       const newMessage = new MessageSchema({
         text: message,
-        conversation: conversation,
+        group: group,
         user: userId,
-        seen: usersInConversation.length > 1 ? usersInConversation : [userId],
+        seen: usersInGroup.length > 1 ? usersInGroup : [userId],
       });
       newMessage.save((err, item) => {
         if (err) {
@@ -119,7 +116,7 @@ exports = module.exports = function (io) {
           MessageSchema.findOne(item)
             .populate("user", "username")
             .exec((err, item) => {
-              io.in(conversation).emit("message", {
+              io.in(group).emit("message", {
                 status: "success",
                 data: item,
               });

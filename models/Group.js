@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const ConversationSchema = new mongoose.Schema({
+const GroupSchema = new mongoose.Schema({
   name: {
     type: String,
     required: false,
@@ -26,4 +26,4 @@ const ConversationSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("Conversation", ConversationSchema);
+module.exports = mongoose.model("Group", GroupSchema);

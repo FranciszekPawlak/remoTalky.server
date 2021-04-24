@@ -1,7 +1,13 @@
 const express = require("express");
 const app = express();
 const socketServer = require("http").createServer(app);
+const socketServer2 = require("http").createServer(app);
 const io = require("socket.io")(socketServer, {
+  cors: {
+    origin: "http://localhost:3000",
+  },
+});
+const io2 = require("socket.io")(socketServer2, {
   cors: {
     origin: "http://localhost:3000",
   },
@@ -9,11 +15,12 @@ const io = require("socket.io")(socketServer, {
 const cors = require("cors");
 const mongoose = require("mongoose");
 const authRoutes = require("./routes/user");
-const conversationRoutes = require("./routes/conversation");
+const groupRoutes = require("./routes/group");
 const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 const { initialUser } = require("./helpers/initialUser");
-const chatSocket = require("./sockets/chatsSocket")(io);
+const groupSocket = require("./sockets/groupSocket")(io);
+const videoSocket = require("./sockets/videoSocket")(io2);
 
 dotenv.config();
 
@@ -37,11 +44,14 @@ app.use(
 app.use(cookieParser());
 
 app.use("/", authRoutes);
-app.use("/conversation", conversationRoutes);
+app.use("/group", groupRoutes);
 
 initialUser();
 
 app.listen(4000, () => console.log(`Server is running on port 4000.`));
 socketServer.listen(4001, () =>
   console.log(`Socket.io is running on port 4001.`)
+);
+socketServer2.listen(4002, () =>
+  console.log(`Socket.io 2 is running on port 4002.`)
 );
