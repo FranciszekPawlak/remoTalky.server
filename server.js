@@ -16,6 +16,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const authRoutes = require("./routes/user");
 const groupRoutes = require("./routes/group");
+const eventRoutes = require("./routes/event");
 const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 const { initialUser } = require("./helpers/initialUser");
@@ -45,6 +46,7 @@ app.use(cookieParser());
 
 app.use("/", authRoutes);
 app.use("/group", groupRoutes);
+app.use("/event", eventRoutes);
 
 initialUser();
 
